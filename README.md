@@ -6,7 +6,7 @@ Make two local LLMs debate any topic (PRO vs CON) while a third model judges and
 
 ## Demo
 
-(30-second GIF coming right after launch)
+![EchoArena Demo](demo.gif)
 
 ## Quick Start
 
