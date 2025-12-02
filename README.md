@@ -16,6 +16,12 @@ cd EchoArena
 go run main.go
 ```
 
+### v2 – now works with any OpenAI-compatible server!
+
+```bash
+go run main.go -endpoint http://localhost:8080 -pro gemma2 -con llama3.2 -judge phi3
+````
+
 Enter any topic → watch the battle live.
 
 **Requires** Ollama running with llama3.2, mistral, phi3 pulled.
