@@ -22,6 +22,12 @@ go run main.go
 go run main.go -endpoint http://localhost:8080 -pro gemma2 -con llama3.2 -judge phi3
 ````
 
+### v2.1 – separate endpoints for max flexibility!
+
+```bash
+go run main.go -pro-endpoint http://localhost:8080/v1 -con-endpoint http://localhost:11434 -judge-endpoint http://localhost:8080/v1 -pro llama3-70b -con gemma2-27b -judge phi3
+```
+
 Enter any topic → watch the battle live.
 
 **Requires** Ollama running with llama3.2, mistral, phi3 pulled.
