@@ -13,10 +13,12 @@ import (
 )
 
 var (
-	proModel    = flag.String("pro", "llama3.2", "PRO model")
-	conModel    = flag.String("con", "mistral", "CON model")
-	judgeModel  = flag.String("judge", "phi3", "Judge model")
-	endpoint    = flag.String("endpoint", "http://127.0.0.1:11434", "OpenAI-compatible endpoint (Ollama, llama.cpp, etc.)")
+	proModel      = flag.String("pro", "llama3.2", "PRO model")
+	conModel      = flag.String("con", "mistral", "CON model")
+	judgeModel    = flag.String("judge", "phi3", "Judge model")
+	proEndpoint   = flag.String("pro-endpoint", "http://127.0.0.1:11434", "PRO endpoint")
+	conEndpoint   = flag.String("con-endpoint", "http://127.0.0.1:11434", "CON endpoint")
+	judgeEndpoint = flag.String("judge-endpoint", "http://127.0.0.1:11434", "Judge endpoint")
 )
 
 type OllamaReq struct {
@@ -30,9 +32,9 @@ type OllamaResp struct {
 	Done     bool   `json:"done"`
 }
 
-func queryOllama(model, prompt string) (string, error) {
+func queryModel(model, prompt, endpoint string) (string, error) {
 	reqBody, _ := json.Marshal(OllamaReq{Model: model, Prompt: prompt, Stream: false})
-	resp, err := http.Post(*endpoint+"/api/generate", "application/json", strings.NewReader(string(reqBody)))
+	resp, err := http.Post(endpoint+"/api/generate", "application/json", strings.NewReader(string(reqBody)))
 	if err != nil {
 		return "", err
 	}
@@ -46,35 +48,32 @@ func queryOllama(model, prompt string) (string, error) {
 func main() {
 	flag.Parse()
 
-	fmt.Println("🗣️ EchoArena v2 – Local LLM Debate Arena (now works with Ollama, llama.cpp, LM Studio, etc.)")
+	fmt.Println("EchoArena v2.1 – Local LLM Debate Arena (separate endpoints for PRO/CON/Judge)")
 	fmt.Print("\nEnter debate topic: ")
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
 	topic := scanner.Text()
 
-	pro := *proModel
-	con := *conModel
-	judge := *judgeModel
-
 	fmt.Printf("\n⚔️ Topic: %s\n", topic)
-	fmt.Printf("🤖 PRO: %s    |    CON: %s    |    Judge: %s\n\n", pro, con, judge)
+	fmt.Printf("🤖 PRO: %s @ %s\n   CON: %s @ %s\n   Judge: %s @ %s\n\n",
+	*proModel, *proEndpoint, *conModel, *conEndpoint, *judgeModel, *judgeEndpoint)
 
 	transcript := []string{}
 
 	for round := 1; round <= 3; round++ {
-		proResp, _ := queryOllama(pro, fmt.Sprintf("You are PRO. Strongly argue FOR: %s (round %d). <150 words", topic, round))
-		transcript = append(transcript, fmt.Sprintf("Round %d – PRO (%s):\n%s", round, pro, proResp))
+		proResp, _ := queryModel(*proModel, fmt.Sprintf("You are PRO. Strongly argue FOR: %s (round %d). <150 words", topic, round), *proEndpoint)
+		transcript = append(transcript, fmt.Sprintf("Round %d – PRO (%s):\n%s", round, *proModel, proResp))
 		fmt.Printf("Round %d – PRO:\n%s\n\n", round, proResp)
 
-		conResp, _ := queryOllama(con, fmt.Sprintf("You are CON. Rebut PRO. Topic: %s (round %d). <150 words", topic, round))
-		transcript = append(transcript, fmt.Sprintf("Round %d – CON (%s):\n%s", round, con, conResp))
+		conResp, _ := queryModel(*conModel, fmt.Sprintf("You are CON. Rebut PRO. Topic: %s (round %d). <150 words", topic, round), *conEndpoint)
+		transcript = append(transcript, fmt.Sprintf("Round %d – CON (%s):\n%s", round, *conModel, conResp))
 		fmt.Printf("Round %d – CON:\n%s\n\n", round, conResp)
 
 		time.Sleep(2 * time.Second)
 	}
 
 	judgePrompt := "Judge this debate. Score PRO and CON 1–10 on logic, evidence, persuasion. Declare clear winner.\n\n" + strings.Join(transcript, "\n\n")
-	verdict, _ := queryOllama(judge, judgePrompt)
+	verdict, _ := queryModel(*judgeModel, judgePrompt, *judgeEndpoint)
 	fmt.Printf("🏛️ JUDGE VERDICT:\n%s\n", verdict)
 
 	os.WriteFile("debate.md", []byte("# EchoArena Debate\n\n"+strings.Join(transcript, "\n\n")+"\n\nJUDGE: "+verdict), 0644)
