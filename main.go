@@ -3,12 +3,20 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+)
+
+var (
+	proModel    = flag.String("pro", "llama3.2", "PRO model")
+	conModel    = flag.String("con", "mistral", "CON model")
+	judgeModel  = flag.String("judge", "phi3", "Judge model")
+	endpoint    = flag.String("endpoint", "http://127.0.0.1:11434", "OpenAI-compatible endpoint (Ollama, llama.cpp, etc.)")
 )
 
 type OllamaReq struct {
@@ -24,7 +32,7 @@ type OllamaResp struct {
 
 func queryOllama(model, prompt string) (string, error) {
 	reqBody, _ := json.Marshal(OllamaReq{Model: model, Prompt: prompt, Stream: false})
-	resp, err := http.Post("http://127.0.0.1:11434/api/generate", "application/json", strings.NewReader(string(reqBody)))
+	resp, err := http.Post(*endpoint+"/api/generate", "application/json", strings.NewReader(string(reqBody)))
 	if err != nil {
 		return "", err
 	}
@@ -36,18 +44,20 @@ func queryOllama(model, prompt string) (string, error) {
 }
 
 func main() {
-	fmt.Println("EchoArena v1 – Local LLM Debate Arena")
+	flag.Parse()
+
+	fmt.Println("🗣️ EchoArena v2 – Local LLM Debate Arena (now works with Ollama, llama.cpp, LM Studio, etc.)")
 	fmt.Print("\nEnter debate topic: ")
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
 	topic := scanner.Text()
 
-	pro := "llama3.2"
-	con := "mistral"
-	judge := "phi3"
+	pro := *proModel
+	con := *conModel
+	judge := *judgeModel
 
-	fmt.Printf("\nTopic: %s\n", topic)
-	fmt.Printf("PRO: %s    |    CON: %s    |    Judge: %s\n\n", pro, con, judge)
+	fmt.Printf("\n⚔️ Topic: %s\n", topic)
+	fmt.Printf("🤖 PRO: %s    |    CON: %s    |    Judge: %s\n\n", pro, con, judge)
 
 	transcript := []string{}
 
@@ -65,8 +75,8 @@ func main() {
 
 	judgePrompt := "Judge this debate. Score PRO and CON 1–10 on logic, evidence, persuasion. Declare clear winner.\n\n" + strings.Join(transcript, "\n\n")
 	verdict, _ := queryOllama(judge, judgePrompt)
-	fmt.Printf("JUDGE VERDICT:\n%s\n", verdict)
+	fmt.Printf("🏛️ JUDGE VERDICT:\n%s\n", verdict)
 
 	os.WriteFile("debate.md", []byte("# EchoArena Debate\n\n"+strings.Join(transcript, "\n\n")+"\n\nJUDGE: "+verdict), 0644)
-	fmt.Println("\nFull transcript saved to debate.md")
+	fmt.Println("\n📄 Full transcript saved to debate.md")
 }
